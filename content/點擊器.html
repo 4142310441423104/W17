@@ -2,6 +2,7 @@
         <head>
         <title>cp2025_hw</title>
         <meta charset="utf-8">
+<meta property="head" content="H1">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
         <link rel="stylesheet" href="./../cmsimde/static/chimper/fonts/icomoon/style.css">
         <link rel="stylesheet" href="./../cmsimde/static/chimper/css/bootstrap.min.css">
@@ -141,22 +142,210 @@ img.add_border {
           </div>
           
         </header>
-    <div id="tipue_search_content"> <a href='點擊器.html'>Next</a> >> 點擊器<br /><h1>About</h1>
-<p>課程名稱: 計算機程式</p>
-<p>三個操作連結:<a href="https://youtu.be/IqeC1KLgZa8">https://youtu.be/IqeC1KLgZa8</a></p>
-<p>心得:<span>一開始對近端執行三個程式其實不太熟悉，操作時也遇到一些問題，像是設定錯誤或程式跑不起來。後來在老師提示與同學討論下，慢慢找到正確的做法，一步步完成機器人程式編輯器、點擊測試和三隻小豬房舍破壞王。雖然過程有點花時間，但最後都能順利執行並錄製影片，對整個流程也比較了解了。</span></p>
-<p>課程評分:</p>
-<p style="padding-left: 30px;"><span style="background-color: #ffff00;">學習心得報告 (60%)</span> - MS Teams 線上參與，<span style="background-color: #ccffcc;">6人一組</span>每三週發表學習心得。</p>
-<p style="padding-left: 60px;">w3、w7、w10、w14、w17、w18</p>
-<p style="padding-left: 60px;">學習心得報告主題:</p>
-<p style="padding-left: 60px;">w3: 什麼是 git, GitHub, gist 與 cmsimde? 如何使用這些工具？為什麼要使用這些工具？ (<a href="https://mde.tw/cp2025/content/Brython.html?src=https://gist.githubusercontent.com/mdecycu/71ff1c69dd233e6a5a83dd60997950de/raw/b4134dc3724f9c6aa1de7534a74f298288de0fa5/round_dot_move.py">動態模擬</a>)</p>
-<p style="padding-left: 60px;">w7: Brython 是什麼？如何在瀏覽器配置 Brython 環境？ Brython 能做什麼？ (<a href="https://mde.tw/cp2025/content/Brython.html">Brython</a>, <a href="https://mde.tw/cp2025/content/Robot_ex.html">Examples</a>)</p>
-<p style="padding-left: 60px;">w10: 如何在瀏覽器中模擬機器人作動？ (<a href="https://mde.tw/cp2025/content/Brython.html?src=https://gist.githubusercontent.com/mdecycu/58fed8bd2f5be98a6456a8dcae512011/raw/4019adba4ee4be19c35982d835bad8e7d83a7b2f/brython_robot4_ex1.py">機器人作動</a>)</p>
-<p style="padding-left: 60px;">w14: 在瀏覽器中模擬機器人作動的目的是什麼？ (<a href="./../downloads/otto_robot.7z">otto_robot.7z</a>, <a href="https://mde.tw/cad2025/content/Homework.html">Plotter</a>, <a href="./../downloads/open_duck_mini.7z">open_duck_mini.7z</a> ,<a href="https://webots.cloud/AcTNYs0">https://webots.cloud/AcTNYs0</a>)</p>
-<p style="padding-left: 60px;">w17 (<span style="background-color: #ccffcc;">1b 採 Youtube 影片簡報</span>): 計算機程式課程學到了什麼？</p>
-<p style="padding-left: 60px;">w18: 課程總結</p>
-<p style="padding-left: 30px;"><span style="background-color: #ffff00;">個人與分組網站維護 (40%)</span> - 每週至少兩次推送與課程進度相關的學習內容與心得。</p>
-<p style="padding-left: 60px;">w9 期中自評、w18 期末自評</p><br /> <a href='點擊器.html'>Next</a> >> 點擊器</div>
+    <div id="tipue_search_content">About << <a href='About.html'>Previous</a> <a href='Brython.html'>Next</a> >> Brython<br /><h1>點擊器</h1>
+<p>在時間內點擊移動的球球，獲得超爆高分！爆炸 !</p>
+<script src="./../cmsimde/static/brython.js"></script>
+<script src="./../cmsimde/static/brython_stdlib.js"></script>
+<script>
+window.onload = function(){
+  brython({debug:1, pythonpath:['./../cmsimde/static/']});
+}
+</script>
+<div id="brython_div1"></div>
+<script type="text/python3">
+from browser import document, timer, window
+import random, time
+
+# ===== 遊戲設定 =====
+GAME_DURATION = 40
+BALL_SIZE = 50
+PARTICLE_COUNT = 8 # 爆炸碎片的數量
+
+# ===== 狀態變數 =====
+score = 0
+game_active = False
+move_handle = None
+time_handle = None
+balls = []
+colors = ["#FF5733", "#33FF57", "#3357FF", "#F3FF33", "#FF33F6"]
+
+# ===== 遊戲區域初始化 =====
+game_area = document["brython_div1"]
+game_area.style.width = "600px"
+game_area.style.height = "500px"
+game_area.style.margin = "20px auto"
+game_area.style.border = "3px solid #333"
+game_area.style.backgroundColor = "#e0e0ff"
+game_area.style.position = "relative"
+game_area.style.overflow = "hidden"
+game_area.style.cursor = "crosshair"
+
+# ===== CSS 爆炸動畫 =====
+style = document.createElement("style")
+style.text = """
+@keyframes explode {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+}
+.particle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: explode 0.5s ease-out forwards;
+}
+"""
+document <= style
+
+# ===== UI 顯示元件 =====
+score_display = document.createElement("div")
+score_display.style.position = "absolute"
+score_display.style.top = "10px"
+score_display.style.left = "10px"
+score_display.style.fontSize = "1.2em"
+score_display.style.fontWeight = "bold"
+score_display.style.backgroundColor = "rgba(255,255,255,0.7)"
+score_display.style.padding = "5px"
+score_display.style.zIndex = "10"
+game_area <= score_display
+
+timer_display = document.createElement("div")
+timer_display.style.position = "absolute"
+timer_display.style.top = "10px"
+timer_display.style.right = "10px"
+timer_display.style.fontSize = "1.2em"
+timer_display.style.fontWeight = "bold"
+timer_display.style.backgroundColor = "rgba(255,255,255,0.7)"
+timer_display.style.padding = "5px"
+timer_display.style.zIndex = "10"
+game_area <= timer_display
+
+# ===== 爆炸特效函式 =====
+def create_explosion(x, y, color):
+    for _ in range(PARTICLE_COUNT):
+        p = document.createElement("div")
+        p.className = "particle"
+        p.style.backgroundColor = color
+        # 設定碎片初始位置（球的中心）
+        p.style.left = f"{x + BALL_SIZE//2}px"
+        p.style.top = f"{y + BALL_SIZE//2}px"
+        
+        # 隨機計算彈射方向 (--tx, --ty)
+        tx = random.randint(-80, 80)
+        ty = random.randint(-80, 80)
+        p.style.setProperty("--tx", f"{tx}px")
+        p.style.setProperty("--ty", f"{ty}px")
+        
+        game_area <= p
+        # 動畫結束後移除元素
+        timer.set_timeout(lambda el=p: el.remove(), 500)
+
+# ===== 建立三顆球 =====
+def create_balls():
+    for i in range(3):
+        b = document.createElement("div")
+        b.style.width = f"{BALL_SIZE}px"
+        b.style.height = f"{BALL_SIZE}px"
+        b.style.position = "absolute"
+        b.style.borderRadius = "50%"
+        b.style.cursor = "pointer"
+        b.style.transition = "top 0.6s, left 0.6s"
+        b.style.backgroundColor = random.choice(colors)
+        b.bind("click", hit_ball)
+        game_area <= b
+        balls.append(b)
+
+# ===== 移動球的邏輯 =====
+def move_three_balls():
+    if not game_active:
+        return
+    max_x = game_area.clientWidth - BALL_SIZE
+    max_y = game_area.clientHeight - BALL_SIZE
+    positions = []
+    for b in balls:
+        attempts = 0
+        while attempts < 10:
+            x = random.randint(0, max_x)
+            y = random.randint(40, max_y)
+            if all(abs(x - px) > 60 or abs(y - py) > 60 for px, py in positions):
+                positions.append((x, y))
+                b.style.left = f"{x}px"
+                b.style.top = f"{y}px"
+                b.style.backgroundColor = random.choice(colors)
+                break
+            attempts += 1
+
+# ===== 點擊事件 =====
+def hit_ball(ev):
+    global score
+    if not game_active:
+        return
+    
+    score += 1
+    score_display.text = f"分數: {score}"
+    
+    # 獲取當前球的位置並觸發爆炸
+    target = ev.currentTarget
+    bx = target.offsetLeft
+    by = target.offsetTop
+    b_color = target.style.backgroundColor
+    
+    create_explosion(bx, by, b_color)
+    
+    move_three_balls()
+    ev.stopPropagation()
+
+# ===== 遊戲結束與計時 =====
+game_over_msg = document.createElement("div")
+game_over_msg.style.position = "absolute"
+game_over_msg.style.top = "50%"
+game_over_msg.style.left = "50%"
+game_over_msg.style.transform = "translate(-50%, -50%)"
+game_over_msg.style.backgroundColor = "rgba(0,0,0,0.9)"
+game_over_msg.style.color = "white"
+game_over_msg.style.padding = "30px"
+game_over_msg.style.borderRadius = "10px"
+game_over_msg.style.fontSize = "2em"
+game_over_msg.style.textAlign = "center"
+game_over_msg.style.display = "none"
+game_over_msg.style.zIndex = "100"
+game_area <= game_over_msg
+
+def restart_game(ev):
+    game_over_msg.style.display = "none"
+    start_game()
+
+def check_time():
+    global game_active
+    remaining = int(end_time - time.time())
+    if remaining <= 0:
+        timer_display.text = "時間: 0s"
+        game_active = False
+        game_over_msg.innerHTML = f"遊戲結束<br>最終分數: {score}<br>"
+        btn = document.createElement("button")
+        btn.text = "重新開始"
+        btn.bind("click", restart_game)
+        game_over_msg <= btn
+        game_over_msg.style.display = "block"
+        timer.clear_interval(move_handle)
+    else:
+        timer_display.text = f"時間: {remaining}s"
+        timer.set_timeout(check_time, 1000)
+
+def start_game():
+    global game_active, end_time, move_handle, score
+    score = 0
+    game_active = True
+    score_display.text = "分數: 0"
+    end_time = time.time() + GAME_DURATION
+    move_three_balls()
+    move_handle = timer.set_interval(move_three_balls, 800)
+    check_time()
+
+create_balls()
+start_game()
+</script><br />About << <a href='About.html'>Previous</a> <a href='Brython.html'>Next</a> >> Brython</div>
         
     <!-- footer -->
       <div class="container">
