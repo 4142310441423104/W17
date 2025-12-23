@@ -1,6 +1,7 @@
 <h1>About</h1>
 <p>課程名稱: 計算機程式</p>
 <p>三個操作連結:<a href="https://youtu.be/IqeC1KLgZa8">https://youtu.be/IqeC1KLgZa8</a></p>
+<p>心得:<span>一開始對近端執行三個程式其實不太熟悉，操作時也遇到一些問題，像是設定錯誤或程式跑不起來。後來在老師提示與同學討論下，慢慢找到正確的做法，一步步完成機器人程式編輯器、點擊測試和三隻小豬房舍破壞王。雖然過程有點花時間，但最後都能順利執行並錄製影片，對整個流程也比較了解了。</span></p>
 <p>課程評分:</p>
 <p style="padding-left: 30px;"><span style="background-color: #ffff00;">學習心得報告 (60%)</span> - MS Teams 線上參與，<span style="background-color: #ccffcc;">6人一組</span>每三週發表學習心得。</p>
 <p style="padding-left: 60px;">w3、w7、w10、w14、w17、w18</p>
@@ -12,7 +13,188 @@
 <p style="padding-left: 60px;">w17 (<span style="background-color: #ccffcc;">1b 採 Youtube 影片簡報</span>): 計算機程式課程學到了什麼？</p>
 <p style="padding-left: 60px;">w18: 課程總結</p>
 <p style="padding-left: 30px;"><span style="background-color: #ffff00;">個人與分組網站維護 (40%)</span> - 每週至少兩次推送與課程進度相關的學習內容與心得。</p>
-<p style="padding-left: 60px;">w9 期中自評、w18 期末自評</p><h1>Brython</h1>
+<p style="padding-left: 60px;">w9 期中自評、w18 期末自評</p><h1>點擊彩球遊戲</h1>
+<p>在時間內點擊移動的球，獲得高分！</p>
+<script src="/static/brython.js"></script>
+<script src="/static/brython_stdlib.js"></script>
+<script>
+window.onload = function(){
+  brython({debug:1, pythonpath:['/static/']});
+}
+</script>
+<div id="brython_div1"></div>
+<script type="text/python3">
+from browser import document, timer
+import random, time
+
+# ===== 遊戲設定 =====
+GAME_DURATION = 40
+BALL_SIZE = 50
+
+# ===== 狀態變數 =====
+score = 0
+game_active = False
+move_handle = None
+time_handle = None
+balls = []
+colors = ["red", "blue", "green", "orange", "purple"]
+
+# ===== 遊戲區域初始化 =====
+game_area = document["brython_div1"]
+game_area.style.width = "600px"
+game_area.style.height = "500px"
+game_area.style.margin = "20px auto"
+game_area.style.border = "3px solid #333"
+game_area.style.backgroundColor = "#e0e0ff"
+game_area.style.position = "relative"
+game_area.style.overflow = "hidden"
+game_area.style.cursor = "crosshair"
+
+# ===== UI 顯示元件 =====
+score_display = document.createElement("div")
+score_display.style.position = "absolute"
+score_display.style.top = "10px"
+score_display.style.left = "10px"
+score_display.style.fontSize = "1.2em"
+score_display.style.fontWeight = "bold"
+score_display.style.backgroundColor = "rgba(255,255,255,0.7)"
+score_display.style.padding = "5px"
+score_display.style.zIndex = "10"
+game_area <= score_display
+
+timer_display = document.createElement("div")
+timer_display.style.position = "absolute"
+timer_display.style.top = "10px"
+timer_display.style.right = "10px"
+timer_display.style.fontSize = "1.2em"
+timer_display.style.fontWeight = "bold"
+timer_display.style.backgroundColor = "rgba(255,255,255,0.7)"
+timer_display.style.padding = "5px"
+timer_display.style.zIndex = "10"
+game_area <= timer_display
+
+# ===== 建立三顆球 =====
+def create_balls():
+    for i in range(3):
+        b = document.createElement("div")
+        b.style.width = f"{BALL_SIZE}px"
+        b.style.height = f"{BALL_SIZE}px"
+        b.style.position = "absolute"
+        b.style.borderRadius = "50%"
+        b.style.cursor = "pointer"
+        b.style.transition = "top 0.6s, left 0.6s"
+        b.style.backgroundColor = random.choice(colors)
+        b.bind("click", hit_ball)
+        game_area <= b
+        balls.append(b)
+
+# ===== 核心邏輯：移動三顆球 (不重疊) =====
+def move_three_balls():
+    if not game_active:
+        return
+
+    max_x = game_area.clientWidth - BALL_SIZE
+    max_y = game_area.clientHeight - BALL_SIZE
+    min_y = 40
+    positions = []
+
+    for b in balls:
+        attempts = 0
+        while attempts < 10:
+            x = random.randint(0, max_x)
+            y = random.randint(min_y, max_y)
+            
+            # 檢查是否與其他球重疊
+            ok = True
+            for px, py in positions:
+                if abs(x - px) < 60 and abs(y - py) < 60:
+                    ok = False
+                    break
+            
+            if ok:
+                positions.append((x, y))
+                b.style.left = f"{x}px"
+                b.style.top = f"{y}px"
+                b.style.backgroundColor = random.choice(colors) # 隨機變換顏色
+                break
+            attempts += 1
+
+# ===== 點擊事件 =====
+def hit_ball(ev):
+    global score
+    if not game_active:
+        return
+
+    score += 1
+    score_display.text = f"分數: {score}"
+    
+    # 點擊後立即移動所有球
+    move_three_balls()
+    ev.stopPropagation()
+
+# ===== 遊戲結束畫面 =====
+game_over_msg = document.createElement("div")
+game_over_msg.style.position = "absolute"
+game_over_msg.style.top = "50%"
+game_over_msg.style.left = "50%"
+game_over_msg.style.transform = "translate(-50%, -50%)"
+game_over_msg.style.backgroundColor = "rgba(0,0,0,0.9)"
+game_over_msg.style.color = "white"
+game_over_msg.style.padding = "30px"
+game_over_msg.style.borderRadius = "10px"
+game_over_msg.style.fontSize = "2em"
+game_over_msg.style.textAlign = "center"
+game_over_msg.style.display = "none"
+game_over_msg.style.zIndex = "100"
+game_area <= game_over_msg
+
+def restart_game(ev):
+    game_over_msg.style.display = "none"
+    start_game()
+
+# ===== 計時器邏輯 =====
+def check_time():
+    global game_active
+    remaining = int(end_time - time.time())
+
+    if remaining <= 0:
+        timer_display.text = "時間: 0s"
+        game_active = False
+        game_over_msg.innerHTML = f"遊戲結束<br>最終分數: {score}<br>"
+        
+        btn = document.createElement("button")
+        btn.text = "重新開始"
+        btn.style.marginTop = "15px"
+        btn.style.fontSize = "0.6em"
+        btn.bind("click", restart_game)
+        
+        game_over_msg <= btn
+        game_over_msg.style.display = "block"
+        
+        timer.clear_interval(move_handle)
+        timer.clear_interval(time_handle)
+    else:
+        timer_display.text = f"時間: {remaining}s"
+
+# ===== 開始遊戲 =====
+def start_game():
+    global game_active, end_time, move_handle, time_handle, score
+    
+    score = 0
+    game_active = True
+    score_display.text = "分數: 0"
+    timer_display.text = f"時間: {GAME_DURATION}s"
+    
+    end_time = time.time() + GAME_DURATION
+    
+    move_three_balls()
+    move_handle = timer.set_interval(move_three_balls, 800)
+    time_handle = timer.set_interval(check_time, 1000)
+
+# 初始化並啟動
+create_balls()
+start_game()
+</script><h1>Brython</h1>
 <p><a href="https://brython.info/">Brython</a> 是一個將 <a href="https://en.wikipedia.org/wiki/Python_(programming_language)">Python</a> 語法編譯為 <a href="https://developer.mozilla.org/zh-TW/docs/Web/JavaScript">JavaScript</a> 的工具，能直接在瀏覽器中以 <a href="https://en.wikipedia.org/wiki/Python_(programming_language)">Python</a> 撰寫前端網頁程式。</p>
 <p><button id="add1to100">1 add to 100</button><button id="robot1">機器人巡邏</button><button id="free_walk">自由行</button></p>
 <!-- 導入 brython 程式庫 -->
@@ -307,8 +489,7 @@ doc["aitetris"].bind("click", aitetris.do)
 <p><!-- Brython 程式執行的結果, 都以 brython_div1 作為切入位置 --></p>
 <div id="brython_div2"></div>
 <!-- editor2 結束 --><hr/>
-<p></p>
-<h2>Pyodide3</h2>
+<p></p><h2>Pyodide3</h2>
 <p>Pyodide3 則在 <a href="https://mde.tw/cp2025/content/Pyodide.html">Pyodide</a> 與 <a href="https://mde.tw/cp2025/content/Pyodide2.html">Pyodide2</a> 頁面架構下，進一步導入 <a href="https://gist.githubusercontent.com/mdecycu/ec4bb35dd0769e7a83d2a9fa57878a67/raw/9f43571ec070ea3e24b083525ee27275a96efcc8/robot_w_world.py">robot_w_world.py</a>，在既有的水平圍牆 <a href="https://mde.tw/cp2025/reeborg/src/images/north.png">north.png</a> 與垂直圍牆 <a href="https://mde.tw/cp2025/reeborg/src/images/east.png">east.png</a> 檔案之外，加入 <a href="https://mde.tw/cp2025/reeborg/src/images/carrot.png">carrot.png</a>、<a href="https://mde.tw/cp2025/reeborg/src/images/grass.png">grass.png</a> 與 <a href="https://mde.tw/cp2025/reeborg/src/images/pale_grass.png">pale_grass.png</a> 等圖檔。並且擴充可從 URL 讀進 json 格式的 world 變數功能，以便製作出更多元的場景任務，要求機器人執行。</p>
 <p>其中 src URL 變數，可以將網路上的機器人控制程式導入 Pyodide3 頁面外，world URL 變數則可以導入源自 <a href="https://mde.tw/reeborg">Reeborg</a> 機器人程式所設定的 json 格式場景。</p>
 <p>由於 Reeborg 系統中的 png 圖檔均非透明背景，<a href="https://gist.githubusercontent.com/mdecycu/ec4bb35dd0769e7a83d2a9fa57878a67/raw/9f43571ec070ea3e24b083525ee27275a96efcc8/robot_w_world.py">robot_w_world.py</a> 必須利用 HTML 中的 CANVAS，將關鍵的白色背景，以透明的方式顯示。</p>

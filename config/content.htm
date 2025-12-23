@@ -13,7 +13,210 @@
 <p style="padding-left: 60px;">w17 (<span style="background-color: #ccffcc;">1b 採 Youtube 影片簡報</span>): 計算機程式課程學到了什麼？</p>
 <p style="padding-left: 60px;">w18: 課程總結</p>
 <p style="padding-left: 30px;"><span style="background-color: #ffff00;">個人與分組網站維護 (40%)</span> - 每週至少兩次推送與課程進度相關的學習內容與心得。</p>
-<p style="padding-left: 60px;">w9 期中自評、w18 期末自評</p><h1>Brython</h1>
+<p style="padding-left: 60px;">w9 期中自評、w18 期末自評</p><h1>點擊器</h1>
+<p>在時間內點擊移動的球球，獲得超爆高分！爆炸 !</p>
+<script src="/static/brython.js"></script>
+<script src="/static/brython_stdlib.js"></script>
+<script>
+window.onload = function(){
+  brython({debug:1, pythonpath:['/static/']});
+}
+</script>
+<div id="brython_div1"></div>
+<script type="text/python3">
+from browser import document, timer, window
+import random, time
+
+# ===== 遊戲設定 =====
+GAME_DURATION = 40
+BALL_SIZE = 50
+PARTICLE_COUNT = 8 # 爆炸碎片的數量
+
+# ===== 狀態變數 =====
+score = 0
+game_active = False
+move_handle = None
+time_handle = None
+balls = []
+colors = ["#FF5733", "#33FF57", "#3357FF", "#F3FF33", "#FF33F6"]
+
+# ===== 遊戲區域初始化 =====
+game_area = document["brython_div1"]
+game_area.style.width = "600px"
+game_area.style.height = "500px"
+game_area.style.margin = "20px auto"
+game_area.style.border = "3px solid #333"
+game_area.style.backgroundColor = "#e0e0ff"
+game_area.style.position = "relative"
+game_area.style.overflow = "hidden"
+game_area.style.cursor = "crosshair"
+
+# ===== CSS 爆炸動畫 =====
+style = document.createElement("style")
+style.text = """
+@keyframes explode {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+}
+.particle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: explode 0.5s ease-out forwards;
+}
+"""
+document <= style
+
+# ===== UI 顯示元件 =====
+score_display = document.createElement("div")
+score_display.style.position = "absolute"
+score_display.style.top = "10px"
+score_display.style.left = "10px"
+score_display.style.fontSize = "1.2em"
+score_display.style.fontWeight = "bold"
+score_display.style.backgroundColor = "rgba(255,255,255,0.7)"
+score_display.style.padding = "5px"
+score_display.style.zIndex = "10"
+game_area <= score_display
+
+timer_display = document.createElement("div")
+timer_display.style.position = "absolute"
+timer_display.style.top = "10px"
+timer_display.style.right = "10px"
+timer_display.style.fontSize = "1.2em"
+timer_display.style.fontWeight = "bold"
+timer_display.style.backgroundColor = "rgba(255,255,255,0.7)"
+timer_display.style.padding = "5px"
+timer_display.style.zIndex = "10"
+game_area <= timer_display
+
+# ===== 爆炸特效函式 =====
+def create_explosion(x, y, color):
+    for _ in range(PARTICLE_COUNT):
+        p = document.createElement("div")
+        p.className = "particle"
+        p.style.backgroundColor = color
+        # 設定碎片初始位置（球的中心）
+        p.style.left = f"{x + BALL_SIZE//2}px"
+        p.style.top = f"{y + BALL_SIZE//2}px"
+        
+        # 隨機計算彈射方向 (--tx, --ty)
+        tx = random.randint(-80, 80)
+        ty = random.randint(-80, 80)
+        p.style.setProperty("--tx", f"{tx}px")
+        p.style.setProperty("--ty", f"{ty}px")
+        
+        game_area <= p
+        # 動畫結束後移除元素
+        timer.set_timeout(lambda el=p: el.remove(), 500)
+
+# ===== 建立三顆球 =====
+def create_balls():
+    for i in range(3):
+        b = document.createElement("div")
+        b.style.width = f"{BALL_SIZE}px"
+        b.style.height = f"{BALL_SIZE}px"
+        b.style.position = "absolute"
+        b.style.borderRadius = "50%"
+        b.style.cursor = "pointer"
+        b.style.transition = "top 0.6s, left 0.6s"
+        b.style.backgroundColor = random.choice(colors)
+        b.bind("click", hit_ball)
+        game_area <= b
+        balls.append(b)
+
+# ===== 移動球的邏輯 =====
+def move_three_balls():
+    if not game_active:
+        return
+    max_x = game_area.clientWidth - BALL_SIZE
+    max_y = game_area.clientHeight - BALL_SIZE
+    positions = []
+    for b in balls:
+        attempts = 0
+        while attempts < 10:
+            x = random.randint(0, max_x)
+            y = random.randint(40, max_y)
+            if all(abs(x - px) > 60 or abs(y - py) > 60 for px, py in positions):
+                positions.append((x, y))
+                b.style.left = f"{x}px"
+                b.style.top = f"{y}px"
+                b.style.backgroundColor = random.choice(colors)
+                break
+            attempts += 1
+
+# ===== 點擊事件 =====
+def hit_ball(ev):
+    global score
+    if not game_active:
+        return
+    
+    score += 1
+    score_display.text = f"分數: {score}"
+    
+    # 獲取當前球的位置並觸發爆炸
+    target = ev.currentTarget
+    bx = target.offsetLeft
+    by = target.offsetTop
+    b_color = target.style.backgroundColor
+    
+    create_explosion(bx, by, b_color)
+    
+    move_three_balls()
+    ev.stopPropagation()
+
+# ===== 遊戲結束與計時 =====
+game_over_msg = document.createElement("div")
+game_over_msg.style.position = "absolute"
+game_over_msg.style.top = "50%"
+game_over_msg.style.left = "50%"
+game_over_msg.style.transform = "translate(-50%, -50%)"
+game_over_msg.style.backgroundColor = "rgba(0,0,0,0.9)"
+game_over_msg.style.color = "white"
+game_over_msg.style.padding = "30px"
+game_over_msg.style.borderRadius = "10px"
+game_over_msg.style.fontSize = "2em"
+game_over_msg.style.textAlign = "center"
+game_over_msg.style.display = "none"
+game_over_msg.style.zIndex = "100"
+game_area <= game_over_msg
+
+def restart_game(ev):
+    game_over_msg.style.display = "none"
+    start_game()
+
+def check_time():
+    global game_active
+    remaining = int(end_time - time.time())
+    if remaining <= 0:
+        timer_display.text = "時間: 0s"
+        game_active = False
+        game_over_msg.innerHTML = f"遊戲結束<br>最終分數: {score}<br>"
+        btn = document.createElement("button")
+        btn.text = "重新開始"
+        btn.bind("click", restart_game)
+        game_over_msg <= btn
+        game_over_msg.style.display = "block"
+        timer.clear_interval(move_handle)
+    else:
+        timer_display.text = f"時間: {remaining}s"
+        timer.set_timeout(check_time, 1000)
+
+def start_game():
+    global game_active, end_time, move_handle, score
+    score = 0
+    game_active = True
+    score_display.text = "分數: 0"
+    end_time = time.time() + GAME_DURATION
+    move_three_balls()
+    move_handle = timer.set_interval(move_three_balls, 800)
+    check_time()
+
+create_balls()
+start_game()
+</script><h1>Brython</h1>
 <p><a href="https://brython.info/">Brython</a> 是一個將 <a href="https://en.wikipedia.org/wiki/Python_(programming_language)">Python</a> 語法編譯為 <a href="https://developer.mozilla.org/zh-TW/docs/Web/JavaScript">JavaScript</a> 的工具，能直接在瀏覽器中以 <a href="https://en.wikipedia.org/wiki/Python_(programming_language)">Python</a> 撰寫前端網頁程式。</p>
 <p><button id="add1to100">1 add to 100</button><button id="robot1">機器人巡邏</button><button id="free_walk">自由行</button></p>
 <!-- 導入 brython 程式庫 -->
@@ -308,8 +511,7 @@ doc["aitetris"].bind("click", aitetris.do)
 <p><!-- Brython 程式執行的結果, 都以 brython_div1 作為切入位置 --></p>
 <div id="brython_div2"></div>
 <!-- editor2 結束 --><hr/>
-<p></p>
-<h2>Pyodide3</h2>
+<p></p><h2>Pyodide3</h2>
 <p>Pyodide3 則在 <a href="https://mde.tw/cp2025/content/Pyodide.html">Pyodide</a> 與 <a href="https://mde.tw/cp2025/content/Pyodide2.html">Pyodide2</a> 頁面架構下，進一步導入 <a href="https://gist.githubusercontent.com/mdecycu/ec4bb35dd0769e7a83d2a9fa57878a67/raw/9f43571ec070ea3e24b083525ee27275a96efcc8/robot_w_world.py">robot_w_world.py</a>，在既有的水平圍牆 <a href="https://mde.tw/cp2025/reeborg/src/images/north.png">north.png</a> 與垂直圍牆 <a href="https://mde.tw/cp2025/reeborg/src/images/east.png">east.png</a> 檔案之外，加入 <a href="https://mde.tw/cp2025/reeborg/src/images/carrot.png">carrot.png</a>、<a href="https://mde.tw/cp2025/reeborg/src/images/grass.png">grass.png</a> 與 <a href="https://mde.tw/cp2025/reeborg/src/images/pale_grass.png">pale_grass.png</a> 等圖檔。並且擴充可從 URL 讀進 json 格式的 world 變數功能，以便製作出更多元的場景任務，要求機器人執行。</p>
 <p>其中 src URL 變數，可以將網路上的機器人控制程式導入 Pyodide3 頁面外，world URL 變數則可以導入源自 <a href="https://mde.tw/reeborg">Reeborg</a> 機器人程式所設定的 json 格式場景。</p>
 <p>由於 Reeborg 系統中的 png 圖檔均非透明背景，<a href="https://gist.githubusercontent.com/mdecycu/ec4bb35dd0769e7a83d2a9fa57878a67/raw/9f43571ec070ea3e24b083525ee27275a96efcc8/robot_w_world.py">robot_w_world.py</a> 必須利用 HTML 中的 CANVAS，將關鍵的白色背景，以透明的方式顯示。</p>
